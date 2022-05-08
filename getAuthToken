@@ -1,0 +1,54 @@
+var username = pm.environment.get('username');
+var password = pm.environment.get('password');
+var base_path = pm.environment.get('base_path');
+var auth_url = base_path + '/session';
+
+const getAuthToken = {
+    url: auth_url,
+    method: 'POST',
+    header: {
+        'Content-Type': 'application/json',
+    },
+    body: {
+        mode: 'application/json',
+        raw: JSON.stringify({
+          username: username,
+          password: password
+        })
+    }
+}
+// remove the comment to see the request
+//console.log(getAuthToken);
+
+var isTokenExpired = true;
+var activeToken = pm.environment.get('activeToken');
+var expiryTime = pm.environment.get('expiryTime');
+
+if (!activeToken || !expiryTime) {
+  console.log('empty active token or expiry date, should generate new one');
+} else if (expiryTime <= (new Date()).getTime()) {
+  console.log('token expired, generate new one');
+} else {
+  isTokenExpired = false;
+}
+
+
+if (isTokenExpired === true) {
+    pm.sendRequest(getAuthToken, function (err, res) {
+        if (err === null) {
+            //remove the comment to see the response status
+            //console.log(res);
+            var response = res.json();
+            //remove the comment to see the token
+             //console.log(response);
+
+            // Save token to activeToken variable
+            pm.environment.set('activeToken', response.access_token)
+            // Calculate expiry date and save to expiryTime variable
+            var expiryDate = new Date();
+            expiryDate.setSeconds(expiryDate.getSeconds() + response.expires_in);
+            pm.environment.set('expiryTime', expiryDate.getTime());
+            console.log('saving token')
+        }
+    });
+}
